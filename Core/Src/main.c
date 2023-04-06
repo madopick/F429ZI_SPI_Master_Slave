@@ -62,12 +62,12 @@ uint16_t bitFlag;
 volatile uint8_t spi1F, spi3F;
 
 /* Buffer used for transmission */
-uint8_t aTxBuffer1[] = "MTEST SEND"; //{10,11,12,13,14,15,16,17,18,19};
-uint8_t aTxBuffer3[] = "MTEST SEND"; //{10,11,12,13,14,15,16,17,18,19};
+uint8_t aTxBuffer1[] = "MSTER SEND"; //{10,11,12,13,14,15,16,17,18,19};
+uint8_t aTxBuffer3[] = "SLAVE SEND"; //{10,11,12,13,14,15,16,17,18,19};
 
 /* Buffer used for reception */
-volatile uint8_t aRxBuffer1[BUFFERSIZE];
-volatile uint8_t aRxBuffer3[BUFFERSIZE];
+uint8_t aRxBuffer1[BUFFERSIZE];
+uint8_t aRxBuffer3[BUFFERSIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -170,6 +170,36 @@ int main(void)
 
 		 while ((spi1F == 0) && (spi3F==0)){}
 
+		 while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY){}
+		 while(HAL_SPI_GetState(&hspi3) != HAL_SPI_STATE_READY){}
+
+		 spi1F = 0;
+		 spi3F = 0;
+
+		 if(HAL_SPI_Transmit_IT(&hspi3, (uint8_t *)aRxBuffer3, 10) != HAL_OK)
+		 {
+			  /* Transfer error in transmission process */
+			  Error_Handler();
+		 }
+
+		 if(HAL_SPI_Receive_IT(&hspi1, (uint8_t*)aRxBuffer1, 10) != HAL_OK)
+		 {
+			 /* Transfer error in transmission process */
+			 Error_Handler();
+		 }
+
+		 while ((spi1F == 0) && (spi3F==0)){}
+
+		 while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY){}
+		 while(HAL_SPI_GetState(&hspi3) != HAL_SPI_STATE_READY){}
+
+		 printf("MASTER RX: %s\r\n\n", aRxBuffer1);
+
+		 memset(aRxBuffer1, 0, sizeof(aRxBuffer1));
+		 memset(aRxBuffer3, 0, sizeof(aRxBuffer3));
+
+		 HAL_Delay(500);
+
 		 bitFlag &= ~BFLAG_BTN;
 	 }
 	 else if (bitFlag & BFLAG_SPIM_WR)
@@ -178,7 +208,7 @@ int main(void)
 	 }
 	 else if (bitFlag & BFLAG_SPIS_WR)
 	 {
-		 printf("SLAVE RX: %s\r\n", aRxBuffer3);
+		 //printf("SLAVE RX: %s\r\n", aRxBuffer3);
 
 //		 for(uint8_t idx = 0; idx < BUFFERSIZE; idx++)
 //		 {
@@ -270,7 +300,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -308,7 +338,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity 	= SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase 		= SPI_PHASE_1EDGE;
   hspi3.Init.NSS 			= SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
   hspi3.Init.FirstBit 		= SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode 		= SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -426,12 +456,12 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	if (hspi->Instance==SPI1)
 	{
-		bitFlag |= BFLAG_SPIM_WR;
+		//bitFlag |= BFLAG_SPIM_WR;
 		//printf("SPIM CB\r\n");
 	}
 	else if (hspi->Instance==SPI3)
 	{
-		bitFlag |= BFLAG_SPIS_WR;
+		//bitFlag |= BFLAG_SPIS_WR;
 		//printf("SPIS CB\r\n");
 	}
 
@@ -443,9 +473,14 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	if (hspi->Instance==SPI1)
 	{
-		bitFlag |= BFLAG_SPIM_WR;
+		//bitFlag |= BFLAG_SPIM_WR;
 		spi1F = 1;
-		printf("SPIM TX CB\r\n");
+		//printf("SPIM TX CB\r\n");
+	}
+	else if (hspi->Instance==SPI3)
+	{
+		spi1F = 1;
+		//printf("SPIS TX CB\r\n");
 	}
 }
 
@@ -454,9 +489,14 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	if (hspi->Instance==SPI3)
 	{
-		bitFlag |= BFLAG_SPIS_WR;
+		//bitFlag |= BFLAG_SPIS_WR;
 		spi3F = 1;
-		printf("SPIS RX CB\r\n");
+		//printf("SPIS RX CB\r\n");
+	}
+	else if (hspi->Instance==SPI1)
+	{
+		spi3F = 1;
+		//printf("SPIM RX CB\r\n");
 	}
 }
 
