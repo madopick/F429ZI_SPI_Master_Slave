@@ -134,7 +134,7 @@ int main(void)
   MX_USART3_UART_Init();
 
   /* USER CODE BEGIN 2 */
-  printf("init OK\r\n");
+  printf("\r\n==== F429ZI init OK ====\r\n");
 
   while ((bitFlag & BFLAG_BTN) == 0){
 	  HAL_Delay(500);
@@ -150,54 +150,47 @@ int main(void)
     /* USER CODE END WHILE */
 	 if (bitFlag & BFLAG_BTN)
 	 {
+		 printf("BTN pressed\r\n");
+
 		 while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY){}
 		 while(HAL_SPI_GetState(&hspi3) != HAL_SPI_STATE_READY){}
 
+
+		 /******************* Transmit *****************************/
+		 printf("SPI3 Master Send\r\n");
 		 spi1F = 0;
 		 spi3F = 0;
 
-		 if(HAL_SPI_Receive_IT(&hspi3, (uint8_t *)aRxBuffer3, 10) != HAL_OK)
+		 if(HAL_SPI_Transmit_IT(&hspi3, (uint8_t *)aTxBuffer1, 10) != HAL_OK)
 		 {
 			  /* Transfer error in transmission process */
 			  Error_Handler();
 		 }
 
-		 if(HAL_SPI_Transmit_IT(&hspi1, (uint8_t*)aTxBuffer1, 10) != HAL_OK)
-		 {
-			 /* Transfer error in transmission process */
-			 Error_Handler();
-		 }
-
-		 while ((spi1F == 0) && (spi3F==0)){}
-
-		 while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY){}
+		 while (spi3F==0){}
 		 while(HAL_SPI_GetState(&hspi3) != HAL_SPI_STATE_READY){}
+
+
+		 /******************* Receive *****************************/
+		 printf("SPI3 Master Receiving\r\n");
+		 memset(aRxBuffer1, 0, sizeof(aRxBuffer1));
+		 HAL_Delay(100);
 
 		 spi1F = 0;
 		 spi3F = 0;
 
-		 if(HAL_SPI_Transmit_IT(&hspi3, (uint8_t *)aRxBuffer3, 10) != HAL_OK)
-		 {
-			  /* Transfer error in transmission process */
-			  Error_Handler();
-		 }
-
-		 if(HAL_SPI_Receive_IT(&hspi1, (uint8_t*)aRxBuffer1, 10) != HAL_OK)
+		 if(HAL_SPI_Receive_IT(&hspi3, (uint8_t*)aRxBuffer1, 10) != HAL_OK)
 		 {
 			 /* Transfer error in transmission process */
 			 Error_Handler();
 		 }
 
-		 while ((spi1F == 0) && (spi3F==0)){}
-
-		 while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY){}
+		 while (spi3F==0){}
 		 while(HAL_SPI_GetState(&hspi3) != HAL_SPI_STATE_READY){}
 
 		 printf("MASTER RX: %s\r\n\n", aRxBuffer1);
 
-		 memset(aRxBuffer1, 0, sizeof(aRxBuffer1));
-		 memset(aRxBuffer3, 0, sizeof(aRxBuffer3));
-
+		 /* debounce */
 		 HAL_Delay(500);
 
 		 bitFlag &= ~BFLAG_BTN;
@@ -332,13 +325,13 @@ static void MX_SPI3_Init(void)
   /* USER CODE END SPI3_Init 1 */
   /* SPI3 parameter configuration*/
   hspi3.Instance 			= SPI3;
-  hspi3.Init.Mode 			= SPI_MODE_SLAVE;
+  hspi3.Init.Mode 			= SPI_MODE_MASTER;
   hspi3.Init.Direction 		= SPI_DIRECTION_2LINES;
   hspi3.Init.DataSize 		= SPI_DATASIZE_8BIT;
   hspi3.Init.CLKPolarity 	= SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase 		= SPI_PHASE_1EDGE;
   hspi3.Init.NSS 			= SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
   hspi3.Init.FirstBit 		= SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode 		= SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -479,24 +472,24 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 	}
 	else if (hspi->Instance==SPI3)
 	{
-		spi1F = 1;
-		//printf("SPIS TX CB\r\n");
+		spi3F = 1;
+		printf("SPI3 TX CB\r\n");
 	}
 }
 
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	if (hspi->Instance==SPI3)
+	if (hspi->Instance==SPI1)
 	{
 		//bitFlag |= BFLAG_SPIS_WR;
-		spi3F = 1;
+		spi1F = 1;
 		//printf("SPIS RX CB\r\n");
 	}
-	else if (hspi->Instance==SPI1)
+	else if (hspi->Instance==SPI3)
 	{
 		spi3F = 1;
-		//printf("SPIM RX CB\r\n");
+		printf("SPI3 RX CB\r\n");
 	}
 }
 
